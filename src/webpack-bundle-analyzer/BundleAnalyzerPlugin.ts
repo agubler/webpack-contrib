@@ -56,8 +56,14 @@ export default class BundleAnalyzerPlugin {
 				fs.readFileSync(path.join(this._outputDirectory, 'manifest.original.json'), 'utf8')
 			);
 			let updatedStats = JSON.stringify(stats);
+			let excludeBundlesRegExp: RegExp | undefined;
+			if (this.opts.excludeBundles) {
+				excludeBundlesRegExp = new RegExp(this.opts.excludeBundles);
+			}
 			Object.keys(manifest).forEach((key) => {
-				updatedStats = updatedStats.replace(new RegExp(originalManifest[key], 'g'), manifest[key]);
+				if (!excludeBundlesRegExp || !excludeBundlesRegExp.test(key)) {
+					updatedStats = updatedStats.replace(new RegExp(originalManifest[key], 'g'), manifest[key]);
+				}
 			});
 			return JSON.parse(updatedStats);
 		} catch (e) {
