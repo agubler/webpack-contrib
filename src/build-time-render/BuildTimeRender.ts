@@ -10,7 +10,8 @@ import {
 	getScriptSources,
 	getForSelector,
 	setupEnvironment,
-	getPageStyles
+	getPageStyles,
+	getRenderHooks
 } from './helpers';
 
 import renderer, { Renderer } from './Renderer';
@@ -79,7 +80,6 @@ export default class BuildTimeRender {
 	private _filesToWrite = new Set();
 	private _filesToRemove = new Set();
 	private _originalRoot!: string;
-	private _bridgePromises: Promise<any>[] = [];
 	private _blockErrors: Error[] = [];
 	private _hasBuildBridgeCache = false;
 	private _renderer: Renderer;
@@ -108,7 +108,7 @@ export default class BuildTimeRender {
 		}
 		this._renderer = renderer;
 		this._puppeteerOptions = puppeteerOptions;
-		this._paths = paths;
+		this._paths = ['', ...paths];
 		this._root = root;
 		this._entries = entries.map((entry) => `${entry.replace('.js', '')}.js`);
 		this._useHistory = useHistory !== undefined ? useHistory : paths.length > 0 && !/^#.*/.test(initialPath);
@@ -241,7 +241,6 @@ export default class BuildTimeRender {
 			const module = require(`${this._basePath}/${modulePath}`);
 			if (module && module.default) {
 				const promise = module.default(...args);
-				this._bridgePromises.push(promise);
 				const result = await promise;
 				this._buildBridgeResult[modulePath] = this._buildBridgeResult[modulePath] || {};
 				this._buildBridgeResult[modulePath][JSON.stringify(args)] = JSON.stringify(result);
@@ -371,11 +370,6 @@ ${blockCacheEntry}`
 		}
 	}
 
-	private async _waitForBridge() {
-		await Promise.all(this._bridgePromises);
-		this._bridgePromises = [];
-	}
-
 	private async _createPage(browser: any) {
 		const reportError = (err: Error) => {
 			if (err.message.indexOf('http://localhost') !== -1) {
@@ -451,42 +445,21 @@ ${blockCacheEntry}`
 			try {
 				const screenshotDirectory = join(this._output, '..', 'info', 'screenshots');
 				ensureDirSync(screenshotDirectory);
-				let page = await this._createPage(browser);
-				const wait = page.waitForNavigation({ waitUntil: 'networkidle0' });
-				await page.goto(`http://localhost:${app.port}${this._baseUrl}`);
-				await wait;
-				await this._waitForBridge();
-				const scripts = await getScriptSources(page, app.port);
-				const additionalScripts = scripts.filter(
-					(script) => script && this._entries.every((entry) => !script.endsWith(originalManifest[entry]))
-				);
-				const additionalCss = (await getPageStyles(page)).filter((url: string) =>
-					this._entries.every((entry) => !url.endsWith(originalManifest[entry.replace('.js', '.css')]))
-				);
-
-				const blockScripts = this._writeBuildBridgeCache(scripts);
-				await page.screenshot({ path: join(screenshotDirectory, 'default.png') });
-
 				let renderResults: RenderResult[] = [];
-				const renderResult = await this._getRenderResult(page, undefined);
-				renderResult.additionalScripts = additionalScripts;
-				renderResult.additionalCss = additionalCss;
-				renderResult.blockScripts = blockScripts;
-				renderResults.push(renderResult);
-				await page.close();
-
 				for (let i = 0; i < this._paths.length; i++) {
 					let path = typeof this._paths[i] === 'object' ? this._paths[i].path : this._paths[i];
-					page = await this._createPage(browser);
-					const wait = page.waitForNavigation({ waitUntil: 'networkidle0' });
+					let page = await this._createPage(browser);
 					await page.goto(`http://localhost:${app.port}${this._baseUrl}${path}`);
 					const pathDirectories = path.replace('#', '').split('/');
 					if (pathDirectories.length > 0) {
 						pathDirectories.pop();
 						ensureDirSync(join(screenshotDirectory, ...pathDirectories));
 					}
-					await wait;
-					await this._waitForBridge();
+					let { rendering, blocksPending } = await getRenderHooks(page);
+					while (rendering || blocksPending) {
+						await new Promise((resolve) => setTimeout(resolve, 16));
+						({ rendering, blocksPending } = await getRenderHooks(page));
+					}
 					const scripts = await getScriptSources(page, app.port);
 					const additionalScripts = scripts.filter(
 						(script) => script && this._entries.every((entry) => !script.endsWith(originalManifest[entry]))
@@ -495,19 +468,18 @@ ${blockCacheEntry}`
 						this._entries.every((entry) => !url.endsWith(originalManifest[entry.replace('.js', '.css')]))
 					);
 					const blockScripts = this._writeBuildBridgeCache(scripts);
-					await page.screenshot({ path: join(screenshotDirectory, `${path.replace('#', '')}.png`) });
+					await page.screenshot({ path: join(screenshotDirectory, `${path ? path.replace('#', '') : 'default'}.png`) });
 					let result = await this._getRenderResult(page, this._paths[i]);
 					result.blockScripts = blockScripts;
 					result.additionalScripts = additionalScripts;
 					result.additionalCss = additionalCss;
 					renderResults.push(result);
-
 					await page.close();
 				}
 
 				this._writeBuildTimeCacheFiles();
 
-				if (!this._useHistory && this._paths.length) {
+				if (!this._useHistory && this._paths.length > 1) {
 					renderResults = [this._createCombinedRenderResult(renderResults)];
 				}
 

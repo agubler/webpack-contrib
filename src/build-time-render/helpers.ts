@@ -65,6 +65,16 @@ export async function getClasses(page: any): Promise<String[]> {
 	});
 }
 
+export async function getRenderHooks(page: any): Promise<any> {
+	return await page.evaluate(() => {
+		const { rendering = true, blocksPending } = window as any;
+		return {
+			rendering,
+			blocksPending
+		};
+	});
+}
+
 export async function setupEnvironment(page: any, base: string): Promise<void> {
 	await page.evaluateOnNewDocument((base: string) => {
 		// @ts-ignore

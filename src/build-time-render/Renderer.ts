@@ -10,15 +10,11 @@ export default (renderer: Renderer = 'puppeteer') => {
 	}
 	return {
 		launch: (options: any) => {
-			let timeout: number;
-			let callback = () => {};
 			class CustomResourceLoader extends ResourceLoader {
 				fetch(url: string, options: any) {
 					if (options.element && options.element.localName === 'iframe') {
 						return null;
 					}
-					clearTimeout(timeout);
-					timeout = setTimeout(() => callback(), 500) as any;
 					return super.fetch(url, options);
 				}
 			}
@@ -75,9 +71,7 @@ export default (renderer: Renderer = 'puppeteer') => {
 							});
 						},
 						waitForNavigation: () => {
-							return new Promise((resolve) => {
-								callback = resolve;
-							});
+							return Promise.resolve();
 						},
 						screenshot: () => {
 							return Promise.resolve();
