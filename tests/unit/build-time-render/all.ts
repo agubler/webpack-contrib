@@ -1,2 +1,2 @@
 import './BuildTimeRender';
-import './BuildTimeRenderMiddleware';
+// import './BuildTimeRenderMiddleware';

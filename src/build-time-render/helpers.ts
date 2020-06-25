@@ -3,6 +3,7 @@ import * as getPort from 'get-port';
 import * as http from 'http';
 import * as url from 'url';
 import * as history from 'connect-history-api-fallback';
+import { BuildTimePath } from './interfaces';
 
 export interface ServeDetails {
 	server: http.Server;
@@ -178,4 +179,18 @@ export async function getPageStyles(page: any): Promise<string[]> {
 	);
 
 	return css.map((url: string) => url.replace(/http:\/\/localhost:\d+\//g, ''));
+}
+
+export function createError(
+	currentPath: string | BuildTimePath | undefined,
+	error: string | Error,
+	type?: 'Runtime' | 'Block'
+) {
+	const message = error instanceof Error ? error.message.replace('Error: ', '') : error;
+	const parsedPath = typeof currentPath === 'object' ? currentPath.path : currentPath;
+	const pathString = parsedPath !== undefined ? ` (path: "${parsedPath || 'default path'}")` : '';
+	const errorType = type ? `${type} ` : '';
+	const btrError = new Error(`Build Time Render ${errorType}Error${pathString}: ${message}`);
+	btrError.stack = error instanceof Error ? error.stack : undefined;
+	return btrError;
 }

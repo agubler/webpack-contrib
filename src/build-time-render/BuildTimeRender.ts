@@ -1,46 +1,15 @@
 import { Compiler, compilation } from 'webpack';
-import { outputFileSync, removeSync, ensureDirSync, readFileSync, existsSync, writeFileSync } from 'fs-extra';
-import { Worker } from 'worker_threads';
+import { outputFileSync, removeSync, readFileSync, existsSync, writeFileSync } from 'fs-extra';
+import { StaticPool } from 'node-worker-threads-pool';
 
 import { join } from 'path';
-import {
-	serve,
-	getClasses,
-	generateBasePath,
-	generateRouteInjectionScript,
-	getScriptSources,
-	getForSelector,
-	getAllForSelector,
-	setupEnvironment,
-	getPageStyles,
-	getRenderHooks,
-	getPageLinks
-} from './helpers';
+import { generateRouteInjectionScript, createError } from './helpers';
+import { BuildTimePath, RenderResult, WriteRenderResult } from './interfaces';
 
-import renderer, { Renderer } from './Renderer';
-import * as cssnano from 'cssnano';
-const filterCss = require('filter-css');
+import { Renderer } from './Renderer';
 const webpack = require('webpack');
-const postcss = require('postcss');
 const createHash = require('webpack/lib/util/createHash');
 import { parse } from 'node-html-parser';
-
-export interface RenderResult {
-	path?: string | BuildTimePath;
-	head: string[];
-	content: string;
-	styles: string;
-	script: string;
-	blockScripts: string[];
-	additionalScripts: string[];
-	additionalCss: string[];
-}
-
-export interface BuildTimePath {
-	path: string;
-	match?: string[];
-	static?: boolean;
-}
 
 export interface BuildTimeRenderArguments {
 	root: string;
@@ -106,12 +75,10 @@ class MockCompilation {
 }
 
 export default class BuildTimeRender {
-	private _currentPath: string | undefined;
 	private _cssFiles: string[] = [];
 	private _entries: string[];
 	private _manifest: any;
 	private _manifestContent: { [index: string]: string } = {};
-	private _buildBridgeResult: any = {};
 	private _blockEntries: string[] = [];
 	private _output?: string;
 	private _jsonpName?: string;
@@ -125,7 +92,6 @@ export default class BuildTimeRender {
 	private _filesToWrite = new Set();
 	private _filesToRemove = new Set();
 	private _originalRoot!: string;
-	private _blockErrors: Error[] = [];
 	private _hasBuildBridgeCache = false;
 	private _scope: string;
 	private _renderer: Renderer;
@@ -179,207 +145,6 @@ export default class BuildTimeRender {
 		}
 	}
 
-	private async _writeIndexHtml({
-		content,
-		head,
-		script,
-		path = '',
-		styles,
-		blockScripts,
-		additionalScripts,
-		additionalCss
-	}: RenderResult) {
-		let isStatic = this._static;
-		if (typeof path === 'object') {
-			if (this._useHistory) {
-				isStatic = path.static === undefined ? isStatic : path.static;
-			}
-			path = path.path;
-		} else {
-			path = path;
-		}
-
-		let html = this._manifestContent['index.html'];
-		const writtenAssets: string[] = this._entries.map((entry) => this._manifest[entry]);
-		if (this._writeHtml) {
-			html = html.replace(this._originalRoot, content);
-			if (head.length) {
-				head = head.filter((node) => !/.*localhost.*/.test(node));
-				html = html.replace(/<head>[\s\S]*<\/head>/, `<head>\n\t\t${head.join('\n\t\t')}\n\t</head>`);
-			}
-			const cssFiles = Object.keys(this._manifest).filter((key) => /\.css$/.test(key));
-			let css = cssFiles.reduce((css, file) => {
-				const cssFile = this._manifest[file];
-				const cssFileRegExp = new RegExp(`<link .*?href="${cssFile}".*?>`);
-				if (cssFile && cssFileRegExp.test(html)) {
-					html = html.replace(cssFileRegExp, '');
-					if (this._entries.indexOf(file.replace('.css', '.js')) !== -1) {
-						css = `${css}<link rel="stylesheet" href="${cssFile}" />`;
-						writtenAssets.push(cssFile);
-					}
-				}
-				return css;
-			}, '');
-
-			css = additionalCss.reduce((prev, url) => {
-				url = url.replace(this._baseUrl.slice(1), '');
-				writtenAssets.push(url);
-
-				return `${prev}<link rel="preload" href="${url}" as="style">`;
-			}, css);
-
-			styles = await this._processCss(styles);
-			html = html.replace(`</head>`, `<style>${styles}</style></head>`);
-			if (isStatic) {
-				html = html.replace(this._createScripts(), '');
-			} else {
-				html = html.replace(this._createScripts(), `${script}${css}${this._createScripts(false)}`);
-
-				const mainScript = this._manifest['main.js'];
-
-				additionalScripts
-					.sort((script1, script2) => {
-						return script1 === mainScript && !(script2 === mainScript) ? 1 : -1;
-					})
-					.forEach((additionalChunk: string) => {
-						additionalChunk = additionalChunk.replace(this._baseUrl.slice(1), '');
-						writtenAssets.push(additionalChunk);
-
-						html = html.replace(
-							'</body>',
-							`<link rel="preload" href="${additionalChunk}" as="script"></body>`
-						);
-					});
-
-				Object.keys(this._manifest)
-					.filter((name) => name.endsWith('.js') || name.endsWith('.css'))
-					.filter((name) => !name.startsWith('runtime/'))
-					.filter((name) => !writtenAssets.some((asset) => this._manifest[name] === asset))
-					.forEach((preload) => {
-						html = html.replace(
-							'</body>',
-							`<link rel="prefetch" href="${this._manifest[preload].replace(
-								this._baseUrl.slice(1),
-								''
-							)}" /></body>`
-						);
-					});
-			}
-		} else {
-			if (!this._sync) {
-				html = html.replace(
-					'</body>',
-					`<script type="text/javascript" src="${this._manifest['runtime/blocks.js']}"></script></body>`
-				);
-			}
-		}
-		if (!isStatic) {
-			blockScripts.forEach((blockScript, i) => {
-				writtenAssets.push(blockScript);
-				html = html.replace('</body>', `<script type="text/javascript" src="${blockScript}"></script></body>`);
-			});
-		}
-		const htmlPath = join(this._output!, ...path.split('/'), 'index.html');
-		if (path) {
-			this._writtenHtmlFiles.push(htmlPath);
-		}
-		outputFileSync(htmlPath, html);
-	}
-
-	private _createScripts(regex = true) {
-		const scripts = this._entries.reduce(
-			(script, entry) => `${script}<script${regex ? '.*' : ''} src="${this._manifest[entry]}"></script>`,
-			''
-		);
-		return regex ? new RegExp(scripts) : scripts;
-	}
-
-	private _filterCss(classes: string[]): string {
-		return this._cssFiles.reduce((result, entry: string) => {
-			let filteredCss: string = filterCss(join(this._output!, entry), (context: string, value: string) => {
-				if (context === 'selector') {
-					value = value.replace(/(:| ).*/, '');
-					value = value
-						.split('.')
-						.slice(0, 2)
-						.join('.');
-					const firstChar = value.substr(0, 1);
-
-					return classes.indexOf(value) === -1 && ['.', '#'].indexOf(firstChar) !== -1;
-				}
-			});
-
-			return `${result}${filteredCss}`;
-		}, '');
-	}
-
-	private async _processCss(css: string) {
-		const cssnanoConfig = cssnano({ preset: ['default', { calc: false, normalizeUrl: false }] });
-		const processedCss = await postcss([cssnanoConfig]).process(css, { from: undefined });
-		return processedCss.css;
-	}
-
-	private async _getRenderResult(
-		page: any,
-		path: BuildTimePath | string | undefined = undefined
-	): Promise<RenderResult> {
-		const classes: any[] = await getClasses(page);
-		let pathValue = typeof path === 'object' ? path.path : path;
-		let content = await getForSelector(page, `#${this._root}`);
-		let head = await getAllForSelector(page, 'head > *');
-		let styles = this._filterCss(classes);
-		let script = '';
-
-		content = content.replace(/http:\/\/localhost:\d+\//g, '');
-		content = content.replace(new RegExp(this._baseUrl.slice(1), 'g'), '');
-		if (this._useHistory) {
-			script = generateBasePath(pathValue, this._scope);
-		}
-
-		return {
-			content,
-			styles,
-			script,
-			path,
-			head,
-			blockScripts: [],
-			additionalScripts: [],
-			additionalCss: []
-		};
-	}
-
-	private async _buildBridge(modulePath: string, args: any[]) {
-		const promise = new Promise<any>((resolve, reject) => {
-			const worker = new Worker(join(__dirname, 'block-worker.js'), {
-				workerData: {
-					basePath: this._basePath,
-					modulePath,
-					args
-				}
-			});
-
-			worker.on('message', resolve);
-			worker.on('error', reject);
-			worker.on('exit', (code) => {
-				if (code !== 0) {
-					reject(new Error(`Worker stopped with exit code ${code}`));
-				}
-			});
-		});
-		try {
-			const { result, error } = await promise;
-			if (error) {
-				this._blockErrors.push(this._createError(error, 'Block'));
-			} else {
-				this._buildBridgeResult[modulePath] = this._buildBridgeResult[modulePath] || {};
-				this._buildBridgeResult[modulePath][JSON.stringify(args)] = JSON.stringify(result);
-				return result;
-			}
-		} catch (error) {
-			this._blockErrors.push(this._createError(error, 'Block'));
-		}
-	}
-
 	private _updateHTML(oldHash: string, hash: string) {
 		const name = 'index.html';
 		let content = this._manifestContent[name];
@@ -388,9 +153,12 @@ export default class BuildTimeRender {
 		this._filesToWrite.add(name);
 	}
 
-	private _createCombinedRenderResult(renderResults: RenderResult[]) {
+	private _createCombinedRenderResult(renderResults: (WriteRenderResult | undefined)[]) {
 		const combined = renderResults.reduce(
 			(combined, result) => {
+				if (!result) {
+					return combined;
+				}
 				combined.styles = result.styles ? `${combined.styles}\n${result.styles}` : combined.styles;
 				combined.html.push(result.content);
 				combined.paths.push(result.path || '');
@@ -420,12 +188,12 @@ export default class BuildTimeRender {
 		};
 	}
 
-	private _writeSyncBuildBridgeCache() {
+	private _writeSyncBuildBridgeCache(result: any): void {
 		const [, , mainHash] = this._manifest['main.js'].match(/(main\.)(.*)(\.bundle)/) || ([] as any);
-		Object.keys(this._buildBridgeResult).forEach((modulePath) => {
-			Object.keys(this._buildBridgeResult[modulePath]).forEach((args) => {
+		Object.keys(result.blockResult).forEach((modulePath) => {
+			Object.keys(result.blockResult[modulePath]).forEach((args) => {
 				this._hasBuildBridgeCache = true;
-				const blockResult = this._buildBridgeResult[modulePath][args];
+				const blockResult = result.blockResult[modulePath][args];
 				const blockCacheEntry = ` blockCacheEntry('${modulePath}', '${args}', ${blockResult});`;
 				if (this._manifestContent['main.js'].indexOf(blockCacheEntry) === -1) {
 					this._manifestContent['main.js'] = this._manifestContent['main.js'].replace(
@@ -450,21 +218,20 @@ export default class BuildTimeRender {
 				this._filesToWrite.add('main.js');
 			});
 		});
-		this._buildBridgeResult = {};
-		return [];
 	}
 
-	private _writeBuildBridgeCache(additionalScripts: string[]) {
+	private _writeBuildBridgeCache(result: any): void {
+		// console.log(result);
 		const scripts: string[] = [];
 		const [, , mainHash] = this._manifest['main.js'].match(/(main\.)(.*)(\.bundle)/) || ([] as any);
 		const chunkMarker = `main:"${mainHash}",`;
 		const blockChunk = 'runtime/blocks.js';
-		Object.keys(this._buildBridgeResult).forEach((modulePath) => {
-			Object.keys(this._buildBridgeResult[modulePath]).forEach((args) => {
+		Object.keys(result.blockResult).forEach((modulePath) => {
+			Object.keys(result.blockResult[modulePath]).forEach((args) => {
 				this._hasBuildBridgeCache = true;
 				const chunkName = `runtime/block-${genHash(modulePath + args)}`;
 				const blockCacheEntry = `blockCacheEntry('${modulePath}', '${args}', '${chunkName}')`;
-				const blockResult = this._buildBridgeResult[modulePath][args];
+				const blockResult = result.blockResult[modulePath][args];
 				const blockResultChunk = `
 (window['${this._jsonpName}'] = window['${this._jsonpName}'] || []).push([['${chunkName}'],{
 /***/ '${chunkName}.js':
@@ -524,9 +291,11 @@ ${blockCacheEntry}`
 						this._filesToRemove.add(blockChunkName);
 						this._filesToRemove.add(bootstrapChunkName);
 						this._filesToWrite.add('bootstrap.js');
-						const additionalScriptIndex = additionalScripts.indexOf(currentBlockChunkName);
+						const additionalScriptIndex = result.renderResult.additionalScripts.indexOf(
+							currentBlockChunkName
+						);
 						if (additionalScriptIndex !== -1) {
-							additionalScripts[additionalScriptIndex] = blockChunkName;
+							result.renderResult.additionalScripts[additionalScriptIndex] = blockChunkName;
 						}
 					}
 					this._manifestContent[`${chunkName}.js`] = blockResultChunk;
@@ -535,8 +304,7 @@ ${blockCacheEntry}`
 				}
 			});
 		});
-		this._buildBridgeResult = {};
-		return scripts;
+		result.renderResult.blockScripts = scripts;
 	}
 
 	private _writeBuildTimeCacheFiles() {
@@ -557,33 +325,8 @@ ${blockCacheEntry}`
 		}
 	}
 
-	private async _createPage(browser: any) {
-		const reportError = (err: Error) => {
-			if (err.message.indexOf('http://localhost') !== -1) {
-				this._blockErrors.push(this._createError(err, 'Runtime'));
-			}
-		};
-		const page = await browser.newPage();
-		page.on('error', reportError);
-		page.on('pageerror', reportError);
-		await setupEnvironment(page, this._baseUrl, this._scope);
-		await page.exposeFunction('__dojoBuildBridge', this._buildBridge.bind(this));
-		return page;
-	}
-
-	private _createError = (error: string | Error, type?: 'Runtime' | 'Block') => {
-		const message = error instanceof Error ? error.message.replace('Error: ', '') : error;
-		const pathString = this._currentPath !== undefined ? ` (path: "${this._currentPath || 'default path'}")` : '';
-		const errorType = type ? `${type} ` : '';
-		const btrError = new Error(`Build Time Render ${errorType}Error${pathString}: ${message}`);
-		btrError.stack = error instanceof Error ? error.stack : undefined;
-		return btrError;
-	};
-
 	private async _run(compilation: compilation.Compilation | MockCompilation, callback: Function, path?: string) {
-		this._buildBridgeResult = {};
 		this._blockEntries = [];
-		this._blockErrors = [];
 		if (!this._output || compilation.errors.length > 0) {
 			return Promise.resolve().then(() => {
 				callback();
@@ -616,7 +359,7 @@ ${blockCacheEntry}`
 		const rootNode = root.querySelector(`#${this._root}`);
 		if (!rootNode) {
 			compilation.errors.push(
-				this._createError(`Could not find DOM node with id: "${this._root}" in src/index.html`)
+				createError(undefined, `Could not find DOM node with id: "${this._root}" in src/index.html`)
 			);
 			callback();
 			return;
@@ -628,118 +371,133 @@ ${blockCacheEntry}`
 			})
 			.map((key) => this._manifest[key]);
 
-		const browser = await renderer(this._renderer).launch(this._puppeteerOptions);
-		const app = await serve(`${this._output}`, this._baseUrl);
-		try {
-			const screenshotDirectory = join(this._output, '..', 'info', 'screenshots');
-			ensureDirSync(screenshotDirectory);
-			let renderResults: RenderResult[] = [];
+		const renderPool = new StaticPool({
+			size: 4,
+			task: __dirname + '/render-worker.js',
+			workerData: {
+				root: this._root,
+				scope: this._scope,
+				output: this._output!,
+				cssFiles: this._cssFiles,
+				renderType: this._renderer,
+				basePath: this._basePath,
+				baseUrl: this._baseUrl,
+				puppeteerOptions: this._puppeteerOptions,
+				initialBtr: this._initialBtr,
+				entries: this._entries,
+				originalManifest: originalManifest,
+				discoverPaths: this._discoverPaths,
+				onDemand: this._onDemand,
+				useHistory: this._useHistory
+			}
+		});
 
-			let path: BuildTimePath | string | undefined;
-
-			while ((path = paths.shift()) != null) {
-				this._currentPath = typeof path === 'object' ? path.path : path;
-				const pageExists = existsSync(join(this._output, ...this._currentPath.split('/'), 'index.html'));
-				const isBtrPage = pageManifest.indexOf(this._currentPath) !== -1;
+		const renderPromises = [];
+		let renderCounter = 0;
+		while (paths.length || renderCounter) {
+			let path = paths.pop();
+			if (path != null) {
+				const parsedPath = typeof path === 'object' ? path.path : path;
+				const pageExists = existsSync(join(this._output, ...parsedPath.split('/'), 'index.html'));
+				const isBtrPage = pageManifest.indexOf(parsedPath) !== -1;
 				if (pageExists && !isBtrPage) {
 					console.warn(
-						`BTR: The page for path: '${
-							this._currentPath
-						}' already exists, but was not generated by BTR. Skipping.`
+						`BTR: The page for path: '${parsedPath}' already exists, but was not generated by BTR. Skipping.`
 					);
 					continue;
 				}
 				if (!isBtrPage) {
 					if (!this._initialBtr) {
 						console.warn(
-							`On demand BTR: This path (${
-								this._currentPath
-							}) has not been previously discovered by BTR, please make sure that it is discoverable or included in the btr paths array`
+							`On demand BTR: This path (${parsedPath}) has not been previously discovered by BTR, please make sure that it is discoverable or included in the btr paths array`
 						);
 					}
-					pageManifest.push(this._currentPath);
+					pageManifest.push(parsedPath);
 				}
-				let page = await this._createPage(browser);
-				try {
-					await page.goto(`http://localhost:${app.port}${this._baseUrl}${this._currentPath}`);
-				} catch {
-					compilation.warnings.push(this._createError('Failed to visit path'));
-					continue;
-				}
-				const pathDirectories = this._currentPath.replace('#', '').split('/');
-				if (pathDirectories.length > 0) {
-					pathDirectories.pop();
-					ensureDirSync(join(screenshotDirectory, ...pathDirectories));
-				}
-				let { rendering, blocksPending } = await getRenderHooks(page, this._scope);
-				while (rendering || blocksPending) {
-					({ rendering, blocksPending } = await getRenderHooks(page, this._scope));
-				}
-				const scripts = await getScriptSources(page, app.port);
-				const additionalScripts = scripts.filter(
-					(script) => script && this._entries.every((entry) => !script.endsWith(originalManifest[entry]))
-				);
-				const additionalCss = (await getPageStyles(page))
-					.filter((url: string) =>
-						this._entries.every((entry) => !url.endsWith(originalManifest[entry.replace('.js', '.css')]))
-					)
-					.filter((url) => !/^http(s)?:\/\/.*/.test(url) || url.indexOf('localhost') !== -1);
-				const blockScripts = this._sync
-					? this._writeSyncBuildBridgeCache()
-					: this._writeBuildBridgeCache(additionalScripts);
-				await page.screenshot({
-					path: join(
-						screenshotDirectory,
-						`${this._currentPath ? this._currentPath.replace('#', '') : 'default'}.png`
-					)
-				});
-				if (this._discoverPaths) {
-					const links = await getPageLinks(page);
-					for (let i = 0; i < links.length; i++) {
-						if (pageManifest.indexOf(links[i]) === -1) {
-							(!this._onDemand || this._initialBtr) && paths.push(links[i]);
-							pageManifest.push(links[i]);
-						}
-					}
-				}
-				let result = await this._getRenderResult(page, path);
-				result.blockScripts = blockScripts;
-				result.additionalScripts = additionalScripts;
-				result.additionalCss = additionalCss;
-				renderResults.push(result);
+				renderCounter++;
+				const renderPromise: Promise<RenderResult> = renderPool.exec({ path });
+				renderPromise
+					.then((result) => {
+						result.paths.forEach((newPath: string) => {
+							if (pageManifest.indexOf(newPath) === -1) {
+								(!this._onDemand || this._initialBtr) && paths.push(newPath);
+								pageManifest.push(newPath);
+							}
+						});
 
-				await page.close();
+						renderCounter--;
+					})
+					.catch(() => {
+						createError(parsedPath, '');
+						renderCounter--;
+					});
+				renderPromises.push(renderPromise);
 			}
-
-			this._writeBuildTimeCacheFiles();
-
-			if (!this._useHistory && this._paths.length > 1) {
-				renderResults = [this._createCombinedRenderResult(renderResults)];
-			}
-
-			await Promise.all(renderResults.map((result) => this._writeIndexHtml(result)));
-			if (this._hasBuildBridgeCache) {
-				outputFileSync(
-					join(this._output, '..', 'info', 'manifest.original.json'),
-					compilation.assets['manifest.json'].source(),
-					'utf8'
-				);
-			}
-			outputFileSync(join(this._output, 'btr-manifest.json'), JSON.stringify(pageManifest, null, 4), 'utf8');
-			if (this._blockErrors.length) {
-				compilation.errors.push(...this._blockErrors);
-			}
-		} catch (error) {
-			if (this._blockErrors.length) {
-				compilation.errors.push(...this._blockErrors);
-			}
-			compilation.errors.push(this._createError(error));
-		} finally {
-			await browser.close();
-			await app.server.close();
-			this._initialBtr = false;
-			callback();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
+
+		const results = await Promise.all(renderPromises);
+		renderPool.destroy();
+
+		let renderResults = results.map((result) => {
+			this._sync ? this._writeSyncBuildBridgeCache(result) : this._writeBuildBridgeCache(result);
+			return result.renderResult;
+		});
+
+		this._writeBuildTimeCacheFiles();
+
+		if (!this._useHistory && this._paths.length > 1) {
+			renderResults = [this._createCombinedRenderResult(renderResults)];
+		}
+
+		const writerPool = new StaticPool({
+			size: 4,
+			task: __dirname + '/writer-worker.js',
+			workerData: {
+				isStatic: this._static,
+				writeHtml: this._writeHtml,
+				originalRoot: this._originalRoot,
+				manifest: this._manifest,
+				sync: this._sync,
+				output: this._output,
+				baseUrl: this._baseUrl,
+				entries: this._entries,
+				manifestContent: this._manifestContent,
+				useHistory: this._useHistory
+			}
+		});
+		let writerCounter = 0;
+		const writerPromises = [];
+		while (renderResults.length || writerCounter) {
+			const result = renderResults.pop();
+			if (result) {
+				writerCounter++;
+				const writerPromise: Promise<string[]> = writerPool.exec(result);
+				writerPromise
+					.then(() => {
+						writerCounter--;
+					})
+					.catch(() => {
+						createError(result.path, '');
+						writerCounter--;
+					});
+				writerPromises.push(writerPromise);
+			}
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
+
+		const writerResults = await Promise.all(writerPromises);
+		this._writtenHtmlFiles.push(...(writerResults as any).flat());
+		writerPool.destroy();
+		if (this._hasBuildBridgeCache) {
+			outputFileSync(
+				join(this._output, '..', 'info', 'manifest.original.json'),
+				compilation.assets['manifest.json'].source(),
+				'utf8'
+			);
+		}
+		outputFileSync(join(this._output, 'btr-manifest.json'), JSON.stringify(pageManifest, null, 4), 'utf8');
+		callback();
 	}
 
 	public runPath(callback: Function, path: string, output: string, jsonpName: string) {

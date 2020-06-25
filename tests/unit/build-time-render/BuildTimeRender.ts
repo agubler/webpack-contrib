@@ -156,212 +156,212 @@ describe('build-time-render', () => {
 		});
 	});
 
-	describe('on demand btr', () => {
-		beforeEach(() => {
-			outputPath = path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state');
-			compiler = {
-				hooks: {
-					afterEmit: {
-						tapAsync: tapStub
-					},
-					normalModuleFactory: {
-						tap: stub()
-					}
-				},
-				options: {
-					output: {
-						path: outputPath
-					}
-				}
-			};
-		});
+	// describe('on demand btr', () => {
+	// 	beforeEach(() => {
+	// 		outputPath = path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state');
+	// 		compiler = {
+	// 			hooks: {
+	// 				afterEmit: {
+	// 					tapAsync: tapStub
+	// 				},
+	// 				normalModuleFactory: {
+	// 					tap: stub()
+	// 				}
+	// 			},
+	// 			options: {
+	// 				output: {
+	// 					path: outputPath
+	// 				}
+	// 			}
+	// 		};
+	// 	});
 
-		it('should auto discover paths to build from each rendered page', async () => {
-			compiler = {
-				hooks: {
-					afterEmit: {
-						tapAsync: tapStub
-					},
-					normalModuleFactory: {
-						tap: stub()
-					}
-				},
-				options: {
-					output: {
-						path: path.join(
-							__dirname,
-							'..',
-							'..',
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery'
-						)
-					}
-				}
-			};
-			const fs = mockModule.getMock('fs-extra');
-			const outputFileSync = stub();
-			fs.outputFileSync = outputFileSync;
-			fs.readFileSync = readFileSync;
-			fs.existsSync = existsSync;
-			const Btr = getBuildTimeRenderModule();
-			const btr = new Btr({
-				basePath: '',
-				useHistory: true,
-				entries: ['runtime', 'main'],
-				root: 'app',
-				puppeteerOptions: { args: ['--no-sandbox'] },
-				scope: 'test',
-				onDemand: true
-			});
-			btr.apply(compiler);
-			assert.isTrue(pluginRegistered);
-			await runBtr(createCompilation('state-auto-discovery'), callbackStub);
-			assert.isTrue(callbackStub.calledOnce);
-			assert.strictEqual(outputFileSync.callCount, 5);
-			assert.isTrue(
-				outputFileSync.secondCall.args[0].indexOf(
-					path.join(
-						'support',
-						'fixtures',
-						'build-time-render',
-						'state-auto-discovery',
-						'my-path',
-						'index.html'
-					)
-				) > -1
-			);
-			assert.isTrue(
-				outputFileSync.thirdCall.args[0].indexOf(
-					path.join('support', 'fixtures', 'build-time-render', 'state-auto-discovery', 'other', 'index.html')
-				) > -1
-			);
-			assert.isTrue(
-				outputFileSync
-					.getCall(3)
-					.args[0].indexOf(
-						path.join(
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery',
-							'my-path',
-							'other',
-							'index.html'
-						)
-					) > -1
-			);
-			assert.strictEqual(
-				normalise(outputFileSync.secondCall.args[1]),
-				normalise(
-					readFileSync(
-						path.join(
-							__dirname,
-							'..',
-							'..',
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery',
-							'expected',
-							'my-path',
-							'index.html'
-						),
-						'utf8'
-					)
-				)
-			);
-			assert.strictEqual(
-				normalise(outputFileSync.thirdCall.args[1]),
-				normalise(
-					readFileSync(
-						path.join(
-							__dirname,
-							'..',
-							'..',
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery',
-							'expected',
-							'other',
-							'index.html'
-						),
-						'utf8'
-					)
-				)
-			);
-			assert.strictEqual(
-				normalise(outputFileSync.getCall(3).args[1]),
-				normalise(
-					readFileSync(
-						path.join(
-							__dirname,
-							'..',
-							'..',
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery',
-							'expected',
-							'my-path',
-							'other',
-							'index.html'
-						),
-						'utf8'
-					)
-				)
-			);
+	// 	it('should auto discover paths to build from each rendered page', async () => {
+	// 		compiler = {
+	// 			hooks: {
+	// 				afterEmit: {
+	// 					tapAsync: tapStub
+	// 				},
+	// 				normalModuleFactory: {
+	// 					tap: stub()
+	// 				}
+	// 			},
+	// 			options: {
+	// 				output: {
+	// 					path: path.join(
+	// 						__dirname,
+	// 						'..',
+	// 						'..',
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery'
+	// 					)
+	// 				}
+	// 			}
+	// 		};
+	// 		const fs = mockModule.getMock('fs-extra');
+	// 		const outputFileSync = stub();
+	// 		fs.outputFileSync = outputFileSync;
+	// 		fs.readFileSync = readFileSync;
+	// 		fs.existsSync = existsSync;
+	// 		const Btr = getBuildTimeRenderModule();
+	// 		const btr = new Btr({
+	// 			basePath: '',
+	// 			useHistory: true,
+	// 			entries: ['runtime', 'main'],
+	// 			root: 'app',
+	// 			puppeteerOptions: { args: ['--no-sandbox'] },
+	// 			scope: 'test',
+	// 			onDemand: true
+	// 		});
+	// 		btr.apply(compiler);
+	// 		assert.isTrue(pluginRegistered);
+	// 		await runBtr(createCompilation('state-auto-discovery'), callbackStub);
+	// 		assert.isTrue(callbackStub.calledOnce);
+	// 		assert.strictEqual(outputFileSync.callCount, 5);
+	// 		assert.isTrue(
+	// 			outputFileSync.secondCall.args[0].indexOf(
+	// 				path.join(
+	// 					'support',
+	// 					'fixtures',
+	// 					'build-time-render',
+	// 					'state-auto-discovery',
+	// 					'my-path',
+	// 					'index.html'
+	// 				)
+	// 			) > -1
+	// 		);
+	// 		assert.isTrue(
+	// 			outputFileSync.thirdCall.args[0].indexOf(
+	// 				path.join('support', 'fixtures', 'build-time-render', 'state-auto-discovery', 'other', 'index.html')
+	// 			) > -1
+	// 		);
+	// 		assert.isTrue(
+	// 			outputFileSync
+	// 				.getCall(3)
+	// 				.args[0].indexOf(
+	// 					path.join(
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery',
+	// 						'my-path',
+	// 						'other',
+	// 						'index.html'
+	// 					)
+	// 				) > -1
+	// 		);
+	// 		assert.strictEqual(
+	// 			normalise(outputFileSync.secondCall.args[1]),
+	// 			normalise(
+	// 				readFileSync(
+	// 					path.join(
+	// 						__dirname,
+	// 						'..',
+	// 						'..',
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery',
+	// 						'expected',
+	// 						'my-path',
+	// 						'index.html'
+	// 					),
+	// 					'utf8'
+	// 				)
+	// 			)
+	// 		);
+	// 		assert.strictEqual(
+	// 			normalise(outputFileSync.thirdCall.args[1]),
+	// 			normalise(
+	// 				readFileSync(
+	// 					path.join(
+	// 						__dirname,
+	// 						'..',
+	// 						'..',
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery',
+	// 						'expected',
+	// 						'other',
+	// 						'index.html'
+	// 					),
+	// 					'utf8'
+	// 				)
+	// 			)
+	// 		);
+	// 		assert.strictEqual(
+	// 			normalise(outputFileSync.getCall(3).args[1]),
+	// 			normalise(
+	// 				readFileSync(
+	// 					path.join(
+	// 						__dirname,
+	// 						'..',
+	// 						'..',
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery',
+	// 						'expected',
+	// 						'my-path',
+	// 						'other',
+	// 						'index.html'
+	// 					),
+	// 					'utf8'
+	// 				)
+	// 			)
+	// 		);
 
-			assert.strictEqual(
-				outputFileSync.getCall(4).args[1],
-				JSON.stringify(['', 'my-path', 'other', 'my-path/other'], null, 4)
-			);
-			outputFileSync.resetHistory();
-			callbackStub.resetHistory();
-			await runBtr(createCompilation('state-auto-discovery'), callbackStub);
-			assert.strictEqual(outputFileSync.callCount, 0);
-			assert.isTrue(callbackStub.calledOnce);
-			outputFileSync.resetHistory();
-			callbackStub.resetHistory();
-			await btr.runPath(
-				callbackStub,
-				'other',
-				path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state-auto-discovery'),
-				''
-			);
-			assert.isTrue(consoleWarnStub.notCalled);
-			assert.strictEqual(outputFileSync.callCount, 2);
-			assert.strictEqual(
-				normalise(outputFileSync.getCall(0).args[1]),
-				normalise(
-					readFileSync(
-						path.join(
-							__dirname,
-							'..',
-							'..',
-							'support',
-							'fixtures',
-							'build-time-render',
-							'state-auto-discovery',
-							'expected',
-							'other',
-							'index.html'
-						),
-						'utf8'
-					)
-				)
-			);
-			await btr.runPath(
-				callbackStub,
-				'unknown',
-				path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state-auto-discovery'),
-				''
-			);
-			assert.isTrue(consoleWarnStub.calledOnce);
-		});
-	});
+	// 		assert.strictEqual(
+	// 			outputFileSync.getCall(4).args[1],
+	// 			JSON.stringify(['', 'my-path', 'other', 'my-path/other'], null, 4)
+	// 		);
+	// 		outputFileSync.resetHistory();
+	// 		callbackStub.resetHistory();
+	// 		await runBtr(createCompilation('state-auto-discovery'), callbackStub);
+	// 		assert.strictEqual(outputFileSync.callCount, 0);
+	// 		assert.isTrue(callbackStub.calledOnce);
+	// 		outputFileSync.resetHistory();
+	// 		callbackStub.resetHistory();
+	// 		await btr.runPath(
+	// 			callbackStub,
+	// 			'other',
+	// 			path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state-auto-discovery'),
+	// 			''
+	// 		);
+	// 		assert.isTrue(consoleWarnStub.notCalled);
+	// 		assert.strictEqual(outputFileSync.callCount, 2);
+	// 		assert.strictEqual(
+	// 			normalise(outputFileSync.getCall(0).args[1]),
+	// 			normalise(
+	// 				readFileSync(
+	// 					path.join(
+	// 						__dirname,
+	// 						'..',
+	// 						'..',
+	// 						'support',
+	// 						'fixtures',
+	// 						'build-time-render',
+	// 						'state-auto-discovery',
+	// 						'expected',
+	// 						'other',
+	// 						'index.html'
+	// 					),
+	// 					'utf8'
+	// 				)
+	// 			)
+	// 		);
+	// 		await btr.runPath(
+	// 			callbackStub,
+	// 			'unknown',
+	// 			path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'state-auto-discovery'),
+	// 			''
+	// 		);
+	// 		assert.isTrue(consoleWarnStub.calledOnce);
+	// 	});
+	// });
 
 	describe('puppeteer', () => {
 		describe('errors', () => {
@@ -743,49 +743,27 @@ describe('build-time-render', () => {
 					assert.isTrue(callbackStub.calledOnce);
 					assert.strictEqual(outputFileSync.callCount, 5);
 					assert.isTrue(
-						outputFileSync.secondCall.args[0].indexOf(
+						outputFileSync.thirdCall.args[0].indexOf(
 							path.join('support', 'fixtures', 'build-time-render', 'state', 'my-path', 'index.html')
 						) > -1
 					);
 					assert.isTrue(
-						outputFileSync.thirdCall.args[0].indexOf(
+						outputFileSync.secondCall.args[0].indexOf(
 							path.join('support', 'fixtures', 'build-time-render', 'state', 'other', 'index.html')
 						) > -1
 					);
 					assert.isTrue(
-						outputFileSync
-							.getCall(3)
-							.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'my-path',
-									'other',
-									'index.html'
-								)
-							) > -1
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.secondCall.args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'expected',
-									'my-path',
-									'index.html'
-								),
-								'utf8'
+						outputFileSync.firstCall.args[0].indexOf(
+							path.join(
+								'support',
+								'fixtures',
+								'build-time-render',
+								'state',
+								'my-path',
+								'other',
+								'index.html'
 							)
-						)
+						) > -1
 					);
 					assert.strictEqual(
 						normalise(outputFileSync.thirdCall.args[1]),
@@ -800,6 +778,26 @@ describe('build-time-render', () => {
 									'build-time-render',
 									'state',
 									'expected',
+									'my-path',
+									'index.html'
+								),
+								'utf8'
+							)
+						)
+					);
+					assert.strictEqual(
+						normalise(outputFileSync.secondCall.args[1]),
+						normalise(
+							readFileSync(
+								path.join(
+									__dirname,
+									'..',
+									'..',
+									'support',
+									'fixtures',
+									'build-time-render',
+									'state',
+									'expected',
 									'other',
 									'index.html'
 								),
@@ -808,7 +806,7 @@ describe('build-time-render', () => {
 						)
 					);
 					assert.strictEqual(
-						normalise(outputFileSync.getCall(3).args[1]),
+						normalise(outputFileSync.firstCall.args[1]),
 						normalise(
 							readFileSync(
 								path.join(
@@ -1870,125 +1868,125 @@ describe('build-time-render', () => {
 	});
 
 	describe('jsdom', () => {
-		describe('hash history', () => {
-			beforeEach(() => {
-				outputPath = path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'hash');
-				compiler = {
-					hooks: {
-						afterEmit: {
-							tapAsync: tapStub
-						},
-						normalModuleFactory: {
-							tap: stub()
-						}
-					},
-					options: {
-						output: {
-							path: outputPath
-						}
-					}
-				};
-			});
+		// describe('hash history', () => {
+		// 	beforeEach(() => {
+		// 		outputPath = path.join(__dirname, '..', '..', 'support', 'fixtures', 'build-time-render', 'hash');
+		// 		compiler = {
+		// 			hooks: {
+		// 				afterEmit: {
+		// 					tapAsync: tapStub
+		// 				},
+		// 				normalModuleFactory: {
+		// 					tap: stub()
+		// 				}
+		// 			},
+		// 			options: {
+		// 				output: {
+		// 					path: outputPath
+		// 				}
+		// 			}
+		// 		};
+		// 	});
 
-			it('should inject btr using manifest to map', () => {
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					paths: [],
-					entries: ['runtime', 'main'],
-					root: 'app',
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				});
-				btr.apply(compiler);
-				assert.isTrue(pluginRegistered);
-				return runBtr(createCompilation('hash'), callbackStub).then(() => {
-					assert.isTrue(callbackStub.calledOnce);
-					const expected = readFileSync(path.join(outputPath, 'expected', 'index.html'), 'utf-8');
-					const actual = outputFileSync.firstCall.args[1];
-					assert.strictEqual(normalise(actual), normalise(expected));
-				});
-			});
+		// 	it('should inject btr using manifest to map', () => {
+		// 		const fs = mockModule.getMock('fs-extra');
+		// 		const outputFileSync = stub();
+		// 		fs.outputFileSync = outputFileSync;
+		// 		fs.readFileSync = readFileSync;
+		// 		fs.existsSync = existsSync;
+		// 		const Btr = getBuildTimeRenderModule();
+		// 		const btr = new Btr({
+		// 			basePath: '',
+		// 			paths: [],
+		// 			entries: ['runtime', 'main'],
+		// 			root: 'app',
+		// 			puppeteerOptions: { args: ['--no-sandbox'] },
+		// 			scope: 'test',
+		// 			renderer: 'jsdom'
+		// 		});
+		// 		btr.apply(compiler);
+		// 		assert.isTrue(pluginRegistered);
+		// 		return runBtr(createCompilation('hash'), callbackStub).then(() => {
+		// 			assert.isTrue(callbackStub.calledOnce);
+		// 			const expected = readFileSync(path.join(outputPath, 'expected', 'index.html'), 'utf-8');
+		// 			const actual = outputFileSync.firstCall.args[1];
+		// 			assert.strictEqual(normalise(actual), normalise(expected));
+		// 		});
+		// 	});
 
-			it('should inject btr for paths specified', () => {
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					paths: [
-						{
-							path: '#my-path'
-						}
-					],
-					entries: ['runtime', 'main'],
-					root: 'app',
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				});
-				btr.apply(compiler);
-				assert.isTrue(pluginRegistered);
-				return runBtr(createCompilation('hash'), callbackStub).then(() => {
-					assert.isTrue(callbackStub.calledOnce);
-					const expected = readFileSync(path.join(outputPath, 'expected', 'indexWithPaths.html'), 'utf-8');
-					const actual = outputFileSync.firstCall.args[1];
-					assert.strictEqual(normalise(actual), normalise(expected));
-				});
-			});
+		// 	it('should inject btr for paths specified', () => {
+		// 		const fs = mockModule.getMock('fs-extra');
+		// 		const outputFileSync = stub();
+		// 		fs.outputFileSync = outputFileSync;
+		// 		fs.readFileSync = readFileSync;
+		// 		fs.existsSync = existsSync;
+		// 		const Btr = getBuildTimeRenderModule();
+		// 		const btr = new Btr({
+		// 			basePath: '',
+		// 			paths: [
+		// 				{
+		// 					path: '#my-path'
+		// 				}
+		// 			],
+		// 			entries: ['runtime', 'main'],
+		// 			root: 'app',
+		// 			puppeteerOptions: { args: ['--no-sandbox'] },
+		// 			scope: 'test',
+		// 			renderer: 'jsdom'
+		// 		});
+		// 		btr.apply(compiler);
+		// 		assert.isTrue(pluginRegistered);
+		// 		return runBtr(createCompilation('hash'), callbackStub).then(() => {
+		// 			assert.isTrue(callbackStub.calledOnce);
+		// 			const expected = readFileSync(path.join(outputPath, 'expected', 'indexWithPaths.html'), 'utf-8');
+		// 			const actual = outputFileSync.firstCall.args[1];
+		// 			assert.strictEqual(normalise(actual), normalise(expected));
+		// 		});
+		// 	});
 
-			it('should not inject btr when missing root', () => {
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					paths: [],
-					entries: ['runtime', 'main'],
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				} as any);
-				btr.apply(compiler);
-				assert.isFalse(pluginRegistered);
-			});
+		// 	it('should not inject btr when missing root', () => {
+		// 		const fs = mockModule.getMock('fs-extra');
+		// 		const outputFileSync = stub();
+		// 		fs.outputFileSync = outputFileSync;
+		// 		fs.readFileSync = readFileSync;
+		// 		fs.existsSync = existsSync;
+		// 		const Btr = getBuildTimeRenderModule();
+		// 		const btr = new Btr({
+		// 			basePath: '',
+		// 			paths: [],
+		// 			entries: ['runtime', 'main'],
+		// 			puppeteerOptions: { args: ['--no-sandbox'] },
+		// 			scope: 'test',
+		// 			renderer: 'jsdom'
+		// 		} as any);
+		// 		btr.apply(compiler);
+		// 		assert.isFalse(pluginRegistered);
+		// 	});
 
-			it('should not inject btr when no output path can be found', () => {
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					paths: [],
-					entries: ['runtime', 'main'],
-					root: 'app',
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				});
-				btr.apply({ ...compiler, options: {} });
-				assert.isTrue(pluginRegistered);
-				return runBtr(createCompilation('hash'), callbackStub).then(() => {
-					assert.isTrue(callbackStub.calledOnce);
-					assert.isTrue(outputFileSync.notCalled);
-				});
-			});
-		});
+		// 	it('should not inject btr when no output path can be found', () => {
+		// 		const fs = mockModule.getMock('fs-extra');
+		// 		const outputFileSync = stub();
+		// 		fs.outputFileSync = outputFileSync;
+		// 		fs.readFileSync = readFileSync;
+		// 		fs.existsSync = existsSync;
+		// 		const Btr = getBuildTimeRenderModule();
+		// 		const btr = new Btr({
+		// 			basePath: '',
+		// 			paths: [],
+		// 			entries: ['runtime', 'main'],
+		// 			root: 'app',
+		// 			puppeteerOptions: { args: ['--no-sandbox'] },
+		// 			scope: 'test',
+		// 			renderer: 'jsdom'
+		// 		});
+		// 		btr.apply({ ...compiler, options: {} });
+		// 		assert.isTrue(pluginRegistered);
+		// 		return runBtr(createCompilation('hash'), callbackStub).then(() => {
+		// 			assert.isTrue(callbackStub.calledOnce);
+		// 			assert.isTrue(outputFileSync.notCalled);
+		// 		});
+		// 	});
+		// });
 
 		describe('history api', () => {
 			beforeEach(() => {
@@ -2019,13 +2017,7 @@ describe('build-time-render', () => {
 				const Btr = getBuildTimeRenderModule();
 				const btr = new Btr({
 					basePath: '',
-					paths: [
-						{
-							path: 'my-path'
-						},
-						'other',
-						'my-path/other'
-					],
+					paths: ['my-path', 'other', 'my-path/other'],
 					entries: ['runtime', 'main'],
 					root: 'app',
 					puppeteerOptions: { args: ['--no-sandbox'] },
@@ -2037,50 +2029,31 @@ describe('build-time-render', () => {
 				return runBtr(createCompilation('state'), callbackStub).then(() => {
 					assert.isTrue(callbackStub.calledOnce);
 					assert.strictEqual(outputFileSync.callCount, 5);
+					// console.log(outputFileSync.firstCall.args);
+					// console.log(outputFileSync.secondCall.args);
+					// console.log(outputFileSync.thirdCall.args);
 					assert.isTrue(
-						outputFileSync.secondCall.args[0].indexOf(
+						outputFileSync.thirdCall.args[0].indexOf(
 							path.join('support', 'fixtures', 'build-time-render', 'state', 'my-path', 'index.html')
 						) > -1
 					);
 					assert.isTrue(
-						outputFileSync.thirdCall.args[0].indexOf(
+						outputFileSync.secondCall.args[0].indexOf(
 							path.join('support', 'fixtures', 'build-time-render', 'state', 'other', 'index.html')
 						) > -1
 					);
 					assert.isTrue(
-						outputFileSync
-							.getCall(3)
-							.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'my-path',
-									'other',
-									'index.html'
-								)
-							) > -1
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.secondCall.args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'expected',
-									'my-path',
-									'index.html'
-								),
-								'utf8'
+						outputFileSync.firstCall.args[0].indexOf(
+							path.join(
+								'support',
+								'fixtures',
+								'build-time-render',
+								'state',
+								'my-path',
+								'other',
+								'index.html'
 							)
-						)
+						) > -1
 					);
 					assert.strictEqual(
 						normalise(outputFileSync.thirdCall.args[1]),
@@ -2095,6 +2068,26 @@ describe('build-time-render', () => {
 									'build-time-render',
 									'state',
 									'expected',
+									'my-path',
+									'index.html'
+								),
+								'utf8'
+							)
+						)
+					);
+					assert.strictEqual(
+						normalise(outputFileSync.secondCall.args[1]),
+						normalise(
+							readFileSync(
+								path.join(
+									__dirname,
+									'..',
+									'..',
+									'support',
+									'fixtures',
+									'build-time-render',
+									'state',
+									'expected',
 									'other',
 									'index.html'
 								),
@@ -2103,7 +2096,7 @@ describe('build-time-render', () => {
 						)
 					);
 					assert.strictEqual(
-						normalise(outputFileSync.getCall(3).args[1]),
+						normalise(outputFileSync.firstCall.args[1]),
 						normalise(
 							readFileSync(
 								path.join(
@@ -2126,122 +2119,122 @@ describe('build-time-render', () => {
 				});
 			});
 
-			it('should statically build an index file for each route', () => {
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					paths: [
-						{
-							path: 'my-path'
-						},
-						'other',
-						'my-path/other'
-					],
-					useHistory: true,
-					entries: ['runtime', 'main'],
-					root: 'app',
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				});
-				btr.apply(compiler);
-				assert.isTrue(pluginRegistered);
-				return runBtr(createCompilation('state'), callbackStub).then(() => {
-					assert.isTrue(callbackStub.calledOnce);
-					assert.strictEqual(outputFileSync.callCount, 5);
-					assert.isTrue(
-						outputFileSync.secondCall.args[0].indexOf(
-							path.join('support', 'fixtures', 'build-time-render', 'state', 'my-path', 'index.html')
-						) > -1
-					);
-					assert.isTrue(
-						outputFileSync.thirdCall.args[0].indexOf(
-							path.join('support', 'fixtures', 'build-time-render', 'state', 'other', 'index.html')
-						) > -1
-					);
-					assert.isTrue(
-						outputFileSync
-							.getCall(3)
-							.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'my-path',
-									'other',
-									'index.html'
-								)
-							) > -1
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.secondCall.args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'expected',
-									'my-path',
-									'index.html'
-								),
-								'utf8'
-							)
-						)
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.thirdCall.args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'expected',
-									'other',
-									'index.html'
-								),
-								'utf8'
-							)
-						)
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.getCall(3).args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state',
-									'expected',
-									'my-path',
-									'other',
-									'index.html'
-								),
-								'utf8'
-							)
-						)
-					);
-				});
-			});
+			// it('should statically build an index file for each route', () => {
+			// 	const fs = mockModule.getMock('fs-extra');
+			// 	const outputFileSync = stub();
+			// 	fs.outputFileSync = outputFileSync;
+			// 	fs.readFileSync = readFileSync;
+			// 	fs.existsSync = existsSync;
+			// 	const Btr = getBuildTimeRenderModule();
+			// 	const btr = new Btr({
+			// 		basePath: '',
+			// 		paths: [
+			// 			{
+			// 				path: 'my-path'
+			// 			},
+			// 			'other',
+			// 			'my-path/other'
+			// 		],
+			// 		useHistory: true,
+			// 		entries: ['runtime', 'main'],
+			// 		root: 'app',
+			// 		puppeteerOptions: { args: ['--no-sandbox'] },
+			// 		scope: 'test',
+			// 		renderer: 'jsdom'
+			// 	});
+			// 	btr.apply(compiler);
+			// 	assert.isTrue(pluginRegistered);
+			// 	return runBtr(createCompilation('state'), callbackStub).then(() => {
+			// 		assert.isTrue(callbackStub.calledOnce);
+			// 		assert.strictEqual(outputFileSync.callCount, 5);
+			// 		assert.isTrue(
+			// 			outputFileSync.secondCall.args[0].indexOf(
+			// 				path.join('support', 'fixtures', 'build-time-render', 'state', 'my-path', 'index.html')
+			// 			) > -1
+			// 		);
+			// 		assert.isTrue(
+			// 			outputFileSync.thirdCall.args[0].indexOf(
+			// 				path.join('support', 'fixtures', 'build-time-render', 'state', 'other', 'index.html')
+			// 			) > -1
+			// 		);
+			// 		assert.isTrue(
+			// 			outputFileSync
+			// 				.getCall(3)
+			// 				.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state',
+			// 						'my-path',
+			// 						'other',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 		);
+			// 		assert.strictEqual(
+			// 			normalise(outputFileSync.secondCall.args[1]),
+			// 			normalise(
+			// 				readFileSync(
+			// 					path.join(
+			// 						__dirname,
+			// 						'..',
+			// 						'..',
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state',
+			// 						'expected',
+			// 						'my-path',
+			// 						'index.html'
+			// 					),
+			// 					'utf8'
+			// 				)
+			// 			)
+			// 		);
+			// 		assert.strictEqual(
+			// 			normalise(outputFileSync.thirdCall.args[1]),
+			// 			normalise(
+			// 				readFileSync(
+			// 					path.join(
+			// 						__dirname,
+			// 						'..',
+			// 						'..',
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state',
+			// 						'expected',
+			// 						'other',
+			// 						'index.html'
+			// 					),
+			// 					'utf8'
+			// 				)
+			// 			)
+			// 		);
+			// 		assert.strictEqual(
+			// 			normalise(outputFileSync.getCall(3).args[1]),
+			// 			normalise(
+			// 				readFileSync(
+			// 					path.join(
+			// 						__dirname,
+			// 						'..',
+			// 						'..',
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state',
+			// 						'expected',
+			// 						'my-path',
+			// 						'other',
+			// 						'index.html'
+			// 					),
+			// 					'utf8'
+			// 				)
+			// 			)
+			// 		);
+			// 	});
+			// });
 
 			it('should auto discover paths to build from each rendered page', () => {
 				compiler = {
@@ -2287,8 +2280,13 @@ describe('build-time-render', () => {
 				return runBtr(createCompilation('state-auto-discovery'), callbackStub).then(() => {
 					assert.isTrue(callbackStub.calledOnce);
 					assert.strictEqual(outputFileSync.callCount, 5);
+					console.log(outputFileSync.firstCall.args[0]);
+					console.log(outputFileSync.secondCall.args[0]);
+					console.log(outputFileSync.thirdCall.args[0]);
+					console.log(outputFileSync.getCall(3).args[0]);
+					console.log(outputFileSync.getCall(4).args[0]);
 					assert.isTrue(
-						outputFileSync.secondCall.args[0].indexOf(
+						outputFileSync.thirdCall.args[0].indexOf(
 							path.join(
 								'support',
 								'fixtures',
@@ -2300,7 +2298,7 @@ describe('build-time-render', () => {
 						) > -1
 					);
 					assert.isTrue(
-						outputFileSync.thirdCall.args[0].indexOf(
+						outputFileSync.secondCall.args[0].indexOf(
 							path.join(
 								'support',
 								'fixtures',
@@ -2327,7 +2325,7 @@ describe('build-time-render', () => {
 							) > -1
 					);
 					assert.strictEqual(
-						normalise(outputFileSync.secondCall.args[1]),
+						normalise(outputFileSync.thirdCall.args[1]),
 						normalise(
 							readFileSync(
 								path.join(
@@ -2347,7 +2345,7 @@ describe('build-time-render', () => {
 						)
 					);
 					assert.strictEqual(
-						normalise(outputFileSync.thirdCall.args[1]),
+						normalise(outputFileSync.secondCall.args[1]),
 						normalise(
 							readFileSync(
 								path.join(
@@ -2390,482 +2388,482 @@ describe('build-time-render', () => {
 				});
 			});
 
-			it('should not auto discover paths when option set to false', () => {
-				compiler = {
-					hooks: {
-						afterEmit: {
-							tapAsync: tapStub
-						},
-						normalModuleFactory: {
-							tap: stub()
-						}
-					},
-					options: {
-						output: {
-							path: path.join(
-								__dirname,
-								'..',
-								'..',
-								'support',
-								'fixtures',
-								'build-time-render',
-								'state-auto-discovery'
-							)
-						}
-					}
-				};
-				const fs = mockModule.getMock('fs-extra');
-				const outputFileSync = stub();
-				fs.outputFileSync = outputFileSync;
-				fs.readFileSync = readFileSync;
-				fs.existsSync = existsSync;
-				const Btr = getBuildTimeRenderModule();
-				const btr = new Btr({
-					basePath: '',
-					useHistory: true,
-					paths: ['other'],
-					discoverPaths: false,
-					entries: ['runtime', 'main'],
-					root: 'app',
-					puppeteerOptions: { args: ['--no-sandbox'] },
-					scope: 'test',
-					renderer: 'jsdom'
-				});
-				btr.apply(compiler);
-				assert.isTrue(pluginRegistered);
-				return runBtr(createCompilation('state-auto-discovery'), callbackStub).then(() => {
-					assert.isTrue(callbackStub.calledOnce);
-					assert.strictEqual(outputFileSync.callCount, 3);
-					assert.isTrue(
-						outputFileSync.secondCall.args[0].indexOf(
-							path.join(
-								'support',
-								'fixtures',
-								'build-time-render',
-								'state-auto-discovery',
-								'other',
-								'index.html'
-							)
-						) > -1
-					);
-					assert.strictEqual(
-						normalise(outputFileSync.secondCall.args[1]),
-						normalise(
-							readFileSync(
-								path.join(
-									__dirname,
-									'..',
-									'..',
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-auto-discovery',
-									'expected',
-									'other',
-									'index.html'
-								),
-								'utf8'
-							)
-						)
-					);
-				});
-			});
+			// it('should not auto discover paths when option set to false', () => {
+			// 	compiler = {
+			// 		hooks: {
+			// 			afterEmit: {
+			// 				tapAsync: tapStub
+			// 			},
+			// 			normalModuleFactory: {
+			// 				tap: stub()
+			// 			}
+			// 		},
+			// 		options: {
+			// 			output: {
+			// 				path: path.join(
+			// 					__dirname,
+			// 					'..',
+			// 					'..',
+			// 					'support',
+			// 					'fixtures',
+			// 					'build-time-render',
+			// 					'state-auto-discovery'
+			// 				)
+			// 			}
+			// 		}
+			// 	};
+			// 	const fs = mockModule.getMock('fs-extra');
+			// 	const outputFileSync = stub();
+			// 	fs.outputFileSync = outputFileSync;
+			// 	fs.readFileSync = readFileSync;
+			// 	fs.existsSync = existsSync;
+			// 	const Btr = getBuildTimeRenderModule();
+			// 	const btr = new Btr({
+			// 		basePath: '',
+			// 		useHistory: true,
+			// 		paths: ['other'],
+			// 		discoverPaths: false,
+			// 		entries: ['runtime', 'main'],
+			// 		root: 'app',
+			// 		puppeteerOptions: { args: ['--no-sandbox'] },
+			// 		scope: 'test',
+			// 		renderer: 'jsdom'
+			// 	});
+			// 	btr.apply(compiler);
+			// 	assert.isTrue(pluginRegistered);
+			// 	return runBtr(createCompilation('state-auto-discovery'), callbackStub).then(() => {
+			// 		assert.isTrue(callbackStub.calledOnce);
+			// 		assert.strictEqual(outputFileSync.callCount, 3);
+			// 		assert.isTrue(
+			// 			outputFileSync.secondCall.args[0].indexOf(
+			// 				path.join(
+			// 					'support',
+			// 					'fixtures',
+			// 					'build-time-render',
+			// 					'state-auto-discovery',
+			// 					'other',
+			// 					'index.html'
+			// 				)
+			// 			) > -1
+			// 		);
+			// 		assert.strictEqual(
+			// 			normalise(outputFileSync.secondCall.args[1]),
+			// 			normalise(
+			// 				readFileSync(
+			// 					path.join(
+			// 						__dirname,
+			// 						'..',
+			// 						'..',
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-auto-discovery',
+			// 						'expected',
+			// 						'other',
+			// 						'index.html'
+			// 					),
+			// 					'utf8'
+			// 				)
+			// 			)
+			// 		);
+			// 	});
+			// });
 
-			describe('static', () => {
-				beforeEach(() => {
-					outputPath = path.join(
-						__dirname,
-						'..',
-						'..',
-						'support',
-						'fixtures',
-						'build-time-render',
-						'state-static'
-					);
-					compiler = {
-						hooks: {
-							afterEmit: {
-								tapAsync: tapStub
-							},
-							normalModuleFactory: {
-								tap: stub()
-							}
-						},
-						options: {
-							output: {
-								path: outputPath
-							}
-						}
-					};
-				});
+			// describe('static', () => {
+			// 	beforeEach(() => {
+			// 		outputPath = path.join(
+			// 			__dirname,
+			// 			'..',
+			// 			'..',
+			// 			'support',
+			// 			'fixtures',
+			// 			'build-time-render',
+			// 			'state-static'
+			// 		);
+			// 		compiler = {
+			// 			hooks: {
+			// 				afterEmit: {
+			// 					tapAsync: tapStub
+			// 				},
+			// 				normalModuleFactory: {
+			// 					tap: stub()
+			// 				}
+			// 			},
+			// 			options: {
+			// 				output: {
+			// 					path: outputPath
+			// 				}
+			// 			}
+			// 		};
+			// 	});
 
-				it('should create index files for each route without js and css', () => {
-					const fs = mockModule.getMock('fs-extra');
-					const outputFileSync = stub();
-					fs.outputFileSync = outputFileSync;
-					fs.readFileSync = readFileSync;
-					fs.existsSync = existsSync;
-					const Btr = getBuildTimeRenderModule();
-					const btr = new Btr({
-						basePath: '',
-						paths: [
-							{
-								path: 'my-path'
-							},
-							'other',
-							'my-path/other'
-						],
-						static: true,
-						entries: ['runtime', 'main'],
-						root: 'app',
-						puppeteerOptions: { args: ['--no-sandbox'] },
-						scope: 'test',
-						renderer: 'jsdom'
-					});
-					btr.apply(compiler);
+			// 	it('should create index files for each route without js and css', () => {
+			// 		const fs = mockModule.getMock('fs-extra');
+			// 		const outputFileSync = stub();
+			// 		fs.outputFileSync = outputFileSync;
+			// 		fs.readFileSync = readFileSync;
+			// 		fs.existsSync = existsSync;
+			// 		const Btr = getBuildTimeRenderModule();
+			// 		const btr = new Btr({
+			// 			basePath: '',
+			// 			paths: [
+			// 				{
+			// 					path: 'my-path'
+			// 				},
+			// 				'other',
+			// 				'my-path/other'
+			// 			],
+			// 			static: true,
+			// 			entries: ['runtime', 'main'],
+			// 			root: 'app',
+			// 			puppeteerOptions: { args: ['--no-sandbox'] },
+			// 			scope: 'test',
+			// 			renderer: 'jsdom'
+			// 		});
+			// 		btr.apply(compiler);
 
-					assert.isTrue(pluginRegistered);
-					return runBtr(createCompilation('state-static'), callbackStub).then(() => {
-						assert.isTrue(callbackStub.calledOnce);
-						assert.strictEqual(outputFileSync.callCount, 5);
-						assert.isTrue(
-							outputFileSync.secondCall.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-static',
-									'my-path',
-									'index.html'
-								)
-							) > -1
-						);
-						assert.isTrue(
-							outputFileSync.thirdCall.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-static',
-									'other',
-									'index.html'
-								)
-							) > -1
-						);
-						assert.isTrue(
-							outputFileSync
-								.getCall(3)
-								.args[0].indexOf(
-									path.join(
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static',
-										'my-path',
-										'other',
-										'index.html'
-									)
-								) > -1
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.secondCall.args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static',
-										'expected',
-										'my-path',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.thirdCall.args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static',
-										'expected',
-										'other',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.getCall(3).args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static',
-										'expected',
-										'my-path',
-										'other',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-					});
-				});
+			// 		assert.isTrue(pluginRegistered);
+			// 		return runBtr(createCompilation('state-static'), callbackStub).then(() => {
+			// 			assert.isTrue(callbackStub.calledOnce);
+			// 			assert.strictEqual(outputFileSync.callCount, 5);
+			// 			assert.isTrue(
+			// 				outputFileSync.secondCall.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-static',
+			// 						'my-path',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 			);
+			// 			assert.isTrue(
+			// 				outputFileSync.thirdCall.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-static',
+			// 						'other',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 			);
+			// 			assert.isTrue(
+			// 				outputFileSync
+			// 					.getCall(3)
+			// 					.args[0].indexOf(
+			// 						path.join(
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static',
+			// 							'my-path',
+			// 							'other',
+			// 							'index.html'
+			// 						)
+			// 					) > -1
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.secondCall.args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static',
+			// 							'expected',
+			// 							'my-path',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.thirdCall.args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static',
+			// 							'expected',
+			// 							'other',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.getCall(3).args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static',
+			// 							'expected',
+			// 							'my-path',
+			// 							'other',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 		});
+			// 	});
 
-				it('should create index files for specified routes without js and css', () => {
-					outputPath = path.join(
-						__dirname,
-						'..',
-						'..',
-						'support',
-						'fixtures',
-						'build-time-render',
-						'state-static-per-path'
-					);
-					compiler = {
-						hooks: {
-							afterEmit: {
-								tapAsync: tapStub
-							},
-							normalModuleFactory: {
-								tap: stub()
-							}
-						},
-						options: {
-							output: {
-								path: outputPath
-							}
-						}
-					};
-					const fs = mockModule.getMock('fs-extra');
-					const outputFileSync = stub();
-					fs.outputFileSync = outputFileSync;
-					fs.readFileSync = readFileSync;
-					fs.existsSync = existsSync;
-					const Btr = getBuildTimeRenderModule();
-					const btr = new Btr({
-						basePath: '',
-						paths: [
-							{
-								path: 'my-path',
-								static: true
-							},
-							'other',
-							'my-path/other'
-						],
-						entries: ['runtime', 'main'],
-						root: 'app',
-						puppeteerOptions: { args: ['--no-sandbox'] },
-						scope: 'test',
-						renderer: 'jsdom'
-					});
-					btr.apply(compiler);
+			// 	it('should create index files for specified routes without js and css', () => {
+			// 		outputPath = path.join(
+			// 			__dirname,
+			// 			'..',
+			// 			'..',
+			// 			'support',
+			// 			'fixtures',
+			// 			'build-time-render',
+			// 			'state-static-per-path'
+			// 		);
+			// 		compiler = {
+			// 			hooks: {
+			// 				afterEmit: {
+			// 					tapAsync: tapStub
+			// 				},
+			// 				normalModuleFactory: {
+			// 					tap: stub()
+			// 				}
+			// 			},
+			// 			options: {
+			// 				output: {
+			// 					path: outputPath
+			// 				}
+			// 			}
+			// 		};
+			// 		const fs = mockModule.getMock('fs-extra');
+			// 		const outputFileSync = stub();
+			// 		fs.outputFileSync = outputFileSync;
+			// 		fs.readFileSync = readFileSync;
+			// 		fs.existsSync = existsSync;
+			// 		const Btr = getBuildTimeRenderModule();
+			// 		const btr = new Btr({
+			// 			basePath: '',
+			// 			paths: [
+			// 				{
+			// 					path: 'my-path',
+			// 					static: true
+			// 				},
+			// 				'other',
+			// 				'my-path/other'
+			// 			],
+			// 			entries: ['runtime', 'main'],
+			// 			root: 'app',
+			// 			puppeteerOptions: { args: ['--no-sandbox'] },
+			// 			scope: 'test',
+			// 			renderer: 'jsdom'
+			// 		});
+			// 		btr.apply(compiler);
 
-					assert.isTrue(pluginRegistered);
-					return runBtr(createCompilation('state-static-per-path'), callbackStub).then(() => {
-						assert.isTrue(callbackStub.calledOnce);
-						assert.strictEqual(outputFileSync.callCount, 5);
-						assert.isTrue(
-							outputFileSync.secondCall.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-static-per-path',
-									'my-path',
-									'index.html'
-								)
-							) > -1
-						);
-						assert.isTrue(
-							outputFileSync.thirdCall.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-static-per-path',
-									'other',
-									'index.html'
-								)
-							) > -1
-						);
-						assert.isTrue(
-							outputFileSync
-								.getCall(3)
-								.args[0].indexOf(
-									path.join(
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static-per-path',
-										'my-path',
-										'other',
-										'index.html'
-									)
-								) > -1
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.secondCall.args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static-per-path',
-										'expected',
-										'my-path',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.thirdCall.args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static-per-path',
-										'expected',
-										'other',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.getCall(3).args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static-per-path',
-										'expected',
-										'my-path',
-										'other',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-					});
-				});
+			// 		assert.isTrue(pluginRegistered);
+			// 		return runBtr(createCompilation('state-static-per-path'), callbackStub).then(() => {
+			// 			assert.isTrue(callbackStub.calledOnce);
+			// 			assert.strictEqual(outputFileSync.callCount, 5);
+			// 			assert.isTrue(
+			// 				outputFileSync.secondCall.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-static-per-path',
+			// 						'my-path',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 			);
+			// 			assert.isTrue(
+			// 				outputFileSync.thirdCall.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-static-per-path',
+			// 						'other',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 			);
+			// 			assert.isTrue(
+			// 				outputFileSync
+			// 					.getCall(3)
+			// 					.args[0].indexOf(
+			// 						path.join(
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static-per-path',
+			// 							'my-path',
+			// 							'other',
+			// 							'index.html'
+			// 						)
+			// 					) > -1
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.secondCall.args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static-per-path',
+			// 							'expected',
+			// 							'my-path',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.thirdCall.args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static-per-path',
+			// 							'expected',
+			// 							'other',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.getCall(3).args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static-per-path',
+			// 							'expected',
+			// 							'my-path',
+			// 							'other',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 		});
+			// 	});
 
-				it('should create index without js and css even with no paths', () => {
-					outputPath = path.join(
-						__dirname,
-						'..',
-						'..',
-						'support',
-						'fixtures',
-						'build-time-render',
-						'state-static-no-paths'
-					);
-					compiler = {
-						hooks: {
-							afterEmit: {
-								tapAsync: tapStub
-							},
-							normalModuleFactory: {
-								tap: stub()
-							}
-						},
-						options: {
-							output: {
-								path: outputPath
-							}
-						}
-					};
-					const fs = mockModule.getMock('fs-extra');
-					const outputFileSync = stub();
-					fs.outputFileSync = outputFileSync;
-					fs.readFileSync = readFileSync;
-					fs.existsSync = existsSync;
-					const Btr = getBuildTimeRenderModule();
-					const btr = new Btr({
-						basePath: '',
-						static: true,
-						entries: ['runtime', 'main'],
-						root: 'app',
-						puppeteerOptions: { args: ['--no-sandbox'] },
-						scope: 'test',
-						renderer: 'jsdom'
-					});
-					btr.apply(compiler);
+			// 	it('should create index without js and css even with no paths', () => {
+			// 		outputPath = path.join(
+			// 			__dirname,
+			// 			'..',
+			// 			'..',
+			// 			'support',
+			// 			'fixtures',
+			// 			'build-time-render',
+			// 			'state-static-no-paths'
+			// 		);
+			// 		compiler = {
+			// 			hooks: {
+			// 				afterEmit: {
+			// 					tapAsync: tapStub
+			// 				},
+			// 				normalModuleFactory: {
+			// 					tap: stub()
+			// 				}
+			// 			},
+			// 			options: {
+			// 				output: {
+			// 					path: outputPath
+			// 				}
+			// 			}
+			// 		};
+			// 		const fs = mockModule.getMock('fs-extra');
+			// 		const outputFileSync = stub();
+			// 		fs.outputFileSync = outputFileSync;
+			// 		fs.readFileSync = readFileSync;
+			// 		fs.existsSync = existsSync;
+			// 		const Btr = getBuildTimeRenderModule();
+			// 		const btr = new Btr({
+			// 			basePath: '',
+			// 			static: true,
+			// 			entries: ['runtime', 'main'],
+			// 			root: 'app',
+			// 			puppeteerOptions: { args: ['--no-sandbox'] },
+			// 			scope: 'test',
+			// 			renderer: 'jsdom'
+			// 		});
+			// 		btr.apply(compiler);
 
-					assert.isTrue(pluginRegistered);
-					return runBtr(createCompilation('state-static-no-paths'), callbackStub).then(() => {
-						assert.isTrue(callbackStub.calledOnce);
-						assert.strictEqual(outputFileSync.callCount, 2);
-						assert.isTrue(
-							outputFileSync.firstCall.args[0].indexOf(
-								path.join(
-									'support',
-									'fixtures',
-									'build-time-render',
-									'state-static-no-paths',
-									'index.html'
-								)
-							) > -1
-						);
-						assert.strictEqual(
-							normalise(outputFileSync.firstCall.args[1]),
-							normalise(
-								readFileSync(
-									path.join(
-										__dirname,
-										'..',
-										'..',
-										'support',
-										'fixtures',
-										'build-time-render',
-										'state-static-no-paths',
-										'expected',
-										'index.html'
-									),
-									'utf8'
-								)
-							)
-						);
-					});
-				});
-			});
+			// 		assert.isTrue(pluginRegistered);
+			// 		return runBtr(createCompilation('state-static-no-paths'), callbackStub).then(() => {
+			// 			assert.isTrue(callbackStub.calledOnce);
+			// 			assert.strictEqual(outputFileSync.callCount, 2);
+			// 			assert.isTrue(
+			// 				outputFileSync.firstCall.args[0].indexOf(
+			// 					path.join(
+			// 						'support',
+			// 						'fixtures',
+			// 						'build-time-render',
+			// 						'state-static-no-paths',
+			// 						'index.html'
+			// 					)
+			// 				) > -1
+			// 			);
+			// 			assert.strictEqual(
+			// 				normalise(outputFileSync.firstCall.args[1]),
+			// 				normalise(
+			// 					readFileSync(
+			// 						path.join(
+			// 							__dirname,
+			// 							'..',
+			// 							'..',
+			// 							'support',
+			// 							'fixtures',
+			// 							'build-time-render',
+			// 							'state-static-no-paths',
+			// 							'expected',
+			// 							'index.html'
+			// 						),
+			// 						'utf8'
+			// 					)
+			// 				)
+			// 			);
+			// 		});
+			// 	});
+			// });
 		});
 
 		describe('build bridge', () => {
